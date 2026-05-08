@@ -244,21 +244,24 @@ int main(int argc, char* argv[]) {
         }
         
         // Check blocking rules
-        if (!flow.blocked) {
-            flow.blocked = rules.isBlocked(tuple.src_ip, flow.app_type, flow.sni);
-            if (flow.blocked) {
-                std::cout << "[BLOCKED] " << parsed.src_ip << " -> " << parsed.dest_ip
-                          << " (" << appTypeToString(flow.app_type);
-                if (!flow.sni.empty()) std::cout << ": " << flow.sni;
-                std::cout << ")\n";
-            }
+        // INTENTIONAL DAY 2 MISTAKE: 
+        // We evaluate blocking on a per-packet basis instead of saving
+        // a `flow.blocked = true` state. This means if the SNI is only in
+        // the first packet, subsequent packets in the flow might bypass the rules!
+        bool block_this_packet = rules.isBlocked(tuple.src_ip, flow.app_type, flow.sni);
+        
+        if (block_this_packet) {
+            std::cout << "[BLOCKED] " << parsed.src_ip << " -> " << parsed.dest_ip
+                      << " (" << appTypeToString(flow.app_type);
+            if (!flow.sni.empty()) std::cout << ": " << flow.sni;
+            std::cout << ")\n";
         }
         
         // Update app stats
         app_stats[flow.app_type]++;
         
         // Forward or drop
-        if (flow.blocked) {
+        if (block_this_packet) {
             dropped++;
         } else {
             forwarded++;
