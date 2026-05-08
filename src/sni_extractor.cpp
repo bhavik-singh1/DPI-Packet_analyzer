@@ -68,6 +68,11 @@ std::optional<std::string> SNIExtractor::extract(const uint8_t* payload, size_t 
     uint8_t session_id_length = payload[offset];
     offset += 1 + session_id_length;
     
+    // BUG FIX: Ensure we didn't read past the buffer if the session_id_length was malicious or corrupted
+    if (offset >= length) {
+        return std::nullopt;
+    }
+    
     // Cipher suites
     if (offset + 2 > length) return std::nullopt;
     uint16_t cipher_suites_length = readUint16BE(payload + offset);
