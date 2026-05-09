@@ -57,8 +57,11 @@ public:
     void shutdown() {
         std::lock_guard<std::mutex> lock(mutex_);
         shutdown_ = true;
-        not_empty_.notify_all();
-        not_full_.notify_all();
+        // INTENTIONAL DAY 3 BUG: Forgot to notify condition variables!
+        // Threads waiting on pop() will sleep forever when shutdown is called,
+        // causing the program to hang instead of exiting cleanly.
+        // not_empty_.notify_all();
+        // not_full_.notify_all();
     }
     
     size_t size() const {
@@ -334,13 +337,18 @@ private:
     std::atomic<uint64_t> dispatched_{0};
     
     void run() {
+        uint64_t rr_counter = 0; // INTENTIONAL DAY 3 MISTAKE
+        
         while (running_) {
             auto pkt_opt = input_queue_.pop(100);
             if (!pkt_opt) continue;
             
-            // Hash to select FP
-            FiveTupleHash hasher;
-            size_t fp_idx = hasher(pkt_opt->tuple) % num_fps_;
+            // INTENTIONAL DAY 3 MISTAKE: Round-Robin Load Balancing!
+            // We are blindly distributing packets to threads one by one.
+            // This destroys the DPI engine because packets from the SAME connection 
+            // will hit DIFFERENT Fast Path threads. Since each thread has its own 
+            // flow map, the connection state gets fractured and blocking fails.
+            size_t fp_idx = rr_counter++ % num_fps_;
             
             fps_[fp_idx]->queue().push(std::move(*pkt_opt));
             dispatched_++;
