@@ -1,0 +1,10 @@
+.git
+.gitignore
+.vscode/
+build/
+*.pcap
+*.exe
+*.obj
+*.o
+.vs/
+install/

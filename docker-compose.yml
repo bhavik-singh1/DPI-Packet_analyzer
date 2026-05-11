@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  dpi-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dpi-engine:latest
+    container_name: dpi-runner
+    # Map the local pcaps directory to the container
+    # This ensures that output PCAPs are persisted to the host machine
+    volumes:
+      - ./pcaps:/app/pcaps
+    # Configure the DPI engine using environment variables
+    environment:
+      # File paths (relative to container)
+      - INPUT_FILE=/app/pcaps/input.pcap
+      - OUTPUT_FILE=/app/pcaps/output.pcap
+      
+      # Thread Configuration
+      - LBS=2
+      - FPS=4
+      
+      # Blocking Rules (uncomment to apply)
+      # - BLOCK_APP=YouTube
+      # - BLOCK_IP=192.168.1.50
+      # - BLOCK_DOMAIN=facebook
+    
+    # Alternatively, you can override the entrypoint/cmd to run the benchmark:
+    # command: ["./dpi_engine", "/app/pcaps/input.pcap", "/app/pcaps/output.pcap", "--lbs", "4"]
